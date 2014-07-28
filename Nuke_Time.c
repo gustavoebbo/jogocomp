@@ -4,10 +4,12 @@
 #include <sys/time.h>
 #include <stdio.h>
 #include <string.h>
-#include <SDL/SDL_mixer.h>
+#include <math.h>
 
 
 #define MAX_ARRAY 10
+#define MAX_NOME 50
+
 /* ------ Anotações ------ //
 
 Pavilhão
@@ -85,177 +87,29 @@ typedef struct
 } ARRAY;
 
 
+RECORDE elemento(ARRAY *, int);
+int tamanho(ARRAY *);
+void insere(ARRAY *, RECORDE);
 
-
-
-void rever(char s[])
-{
-   int i, j;
-   char c;
-
-   for (i = 0, j = strlen(s)-1; i<j; i++, j--) {
-       c = s[i];
-       s[i] = s[j];
-       s[j] = c;
-   }
-}
-
-void itoa(int n, char s[])
-{
-   int i, sign;
-
-   if ((sign = n) < 0)  /* record sign */
-       n = -n;          /* make n positive */
-   i = 0;
-   do {       /* generate digits in reverse order */
-       s[i++] = n % 10 + '0';   /* get next digit */
-   } while ((n /= 10) > 0);     /* delete it */
-   if (sign < 0)
-       s[i++] = '-';
-   s[i] = '\0';
-   rever(s);
-}
-
-
-
-
-void bubble_sort(RECORDE list[], int n)
-{
-    int i, j;
-    RECORDE swap;
-
-    for(i = 0 ; i < ( n - 1 ); i++)
-    {
-        for(j = 0 ; j < n - i - 1; j++)
-        {
-            if(list[j].pontuacaorecord < list[j+1].pontuacaorecord)
-            {
-                swap = list[j];
-                list[j] = list[j+1];
-                list[j+1] = swap;
-            }
-        }
-    }
-}
-
-
-void organiza(ARRAY *array)
-{
-    bubble_sort(array->vetor, array->n);
-}
-
-
-int tamanho(ARRAY *array)
-{
-    return array->n;
-}
-
-RECORDE elemento(ARRAY *array, int posicao)
-{
-    return array->vetor[posicao];
-}
-
-
-void remove_posicao(ARRAY *array, int posicao)
-{
-    if(tamanho(array) == 0)
-    {
-        return;
-    }
-    else if(tamanho(array) == 1)
-    {
-        array->n -= 1;
-        return;
-    }
-    else
-    {
-        array->n -= 1;
-        array->vetor[posicao] = array->vetor[tamanho(array)];
-    }
-
-    organiza(array);
-}
-
-void insere(ARRAY *array, RECORDE recorde)
-{
-    if(tamanho(array) < MAX_ARRAY)
-    {
-        array->vetor[tamanho(array)] = recorde;
-        array->n += 1;
-    }
-    else
-    {
-        RECORDE menor_recorde;
-        menor_recorde = elemento(array, MAX_ARRAY - 1);
-
-        if(menor_recorde.pontuacaorecord >= recorde.pontuacaorecord)
-        {
-            return;
-        }
-        else
-        {
-            remove_posicao(array, MAX_ARRAY - 1);
-            insere(array, recorde);
-            return;
-        }
-    }
-
-    organiza(array);
-}
-
-
-void imprimerec(ARRAY *array,SDL_Surface *screen, TTF_Font *font, SDL_Color textColorCinza)
-{
-    int i;
-    char pont_peq[10];
-
-    RECORDE recorde;
-
-    SDL_Surface *nome;
-    SDL_Surface *pontos;
-
-    for(i = 0; i < tamanho(array); i++)
-    {
-        recorde = elemento(array, i);
-
-        itoa(recorde.pontuacaorecord,pont_peq);
-        pontos = TTF_RenderText_Solid( font, pont_peq, textColorCinza );
-        nome = TTF_RenderText_Solid( font, recorde.nome, textColorCinza );
-
-        apply_surface(120, (200+(i*40)), nome, screen, NULL );
-
-        apply_surface( 700, (200 +(i*40)) , pontos, screen, NULL );
-
-    }
-
-    SDL_Flip(screen);
-}
-
-
-
-
-
-
-
+void remove_posicao(ARRAY *, int);
+//void imprime(ARRAY *);
+void sort(ARRAY *);
+void bubble_sort(RECORDE *, int);
 
 
 int main ( int argc, char** argv )
 {
 
-
-
-
-
-    Uint32 start = 0;
+    //SDL_EnableUNICODE( SDL_ENABLE );
 
 
     RECORDE jogador;
-    char temp[10];
+    char temp[20];
 
     jogador.pontuacaorecord = 0;
     // jogador.nome = 'JOGADOR';
 
-    char *nome_arquivo = "recordes.txt";
+    char *nome_arquivo = "recordes.dat";
     FILE *p_arquivo;
 
     ARRAY array;
@@ -267,6 +121,12 @@ int main ( int argc, char** argv )
         fclose(p_arquivo);
     }
 
+    //imprime(&array);
+
+    RECORDE rec1;
+    RECORDE recorde;
+    char vaiblitar[50];
+    SDL_Surface *text_vaiblitar = NULL;
 
 
 
@@ -388,20 +248,15 @@ int main ( int argc, char** argv )
         return 1;
     }
 
-    if( Mix_OpenAudio( 22050, MIX_DEFAULT_FORMAT, 2, 4096 ) == -1 )
-    {
-        return 1;
-    }
-
     SDL_WM_SetCaption( "Duke Nukem - Nuke Time", NULL );
 
-    //SDL_Surface* posi_matriz;
-    //posi_matriz = IMG_Load("posi_matriz.png");
-    //if (!posi_matriz)
-    //{
-    //    printf("Nem deu para carregar esse png: %s\n", SDL_GetError());
-    //    return 1;
-    //}
+    SDL_Surface* posi_matriz;
+    posi_matriz = IMG_Load("posi_matriz.png");
+    if (!posi_matriz)
+    {
+        printf("Nem deu para carregar esse png: %s\n", SDL_GetError());
+        return 1;
+    }
 
     SDL_Surface *textrecord = NULL;
 
@@ -557,8 +412,8 @@ int main ( int argc, char** argv )
     clubfimfase = IMG_Load("logo_club_fimfase_DN.png");
     if (!clubfimfase)
     {
-    printf("Nem deu para carregar esse png: %s\n", SDL_GetError());
-    return 1;
+        printf("Nem deu para carregar esse png: %s\n", SDL_GetError());
+        return 1;
     }
 
     SDL_Surface* imgburaco = NULL;
@@ -569,10 +424,25 @@ int main ( int argc, char** argv )
         return 1;
     }
 
-
     SDL_Surface *fundoperdeujogo = NULL;
     fundoperdeujogo = IMG_Load("bg_gameover_DN.png");
     if (!fundoperdeujogo)
+    {
+        printf("Nem deu para carregar esse png: %s\n", SDL_GetError());
+        return 1;
+    }
+
+    SDL_Surface *fundoinstrucoes = NULL;
+    fundoinstrucoes = IMG_Load("bg_instrucoes_DN.png");
+    if (!fundoinstrucoes)
+    {
+        printf("Nem deu para carregar esse png: %s\n", SDL_GetError());
+        return 1;
+    }
+
+    SDL_Surface *fundorecordes = NULL;
+    fundorecordes = IMG_Load("bg_recordes_DN.png");
+    if (!fundorecordes)
     {
         printf("Nem deu para carregar esse png: %s\n", SDL_GetError());
         return 1;
@@ -625,46 +495,6 @@ int main ( int argc, char** argv )
         printf("Nem deu para carregar esse png: %s\n", SDL_GetError());
         return 1;
     }
-
-        Mix_Music *theme = NULL;
-    Mix_Music *jogomus = NULL;
-    // LOAD FALAS.
-    Mix_Chunk *diesob = NULL;
-    Mix_Chunk *gameover = NULL;
-    Mix_Chunk *hail = NULL;
-    Mix_Chunk *kickuass = NULL;
-    Mix_Chunk *letgod = NULL;
-    Mix_Chunk *myname = NULL;
-    Mix_Chunk *hell = NULL;
-    Mix_Chunk *yipie = NULL;
-    Mix_Chunk *pissin = NULL;
-    Mix_Chunk *faceass = NULL;
-    Mix_Chunk *bubble = NULL;
-    Mix_Chunk *quit = NULL;
-    Mix_Chunk *hurts = NULL;
-    // LOAD EXPLOSAO
-    Mix_Chunk *explosao = NULL;
-
-    theme = Mix_LoadMUS( "theme.wav" );
-    jogomus = Mix_LoadMUS( "musjogo.wav ");
-
-    if(theme == NULL || jogomus == NULL)
-        printf("Erro ao carregar a música\n");
-
-    diesob = Mix_LoadWAV( "diesob.wav" );
-    gameover = Mix_LoadWAV( "gameover.wav" );
-    hail = Mix_LoadWAV( "hail.wav" );
-    kickuass = Mix_LoadWAV( "kickuass.wav" );
-    letgod = Mix_LoadWAV( "letgod.wav" );
-    myname = Mix_LoadWAV( "myname.wav" );
-    hell = Mix_LoadWAV( "hell.wav" );
-    yipie = Mix_LoadWAV( "yipie.wav" );
-    pissin = Mix_LoadWAV( "pissin.wav" );
-    faceass = Mix_LoadWAV( "faceass.wav" );
-    bubble = Mix_LoadWAV( "bubble.wav" );
-    explosao = Mix_LoadWAV( "explosao.wav" );
-    quit = Mix_LoadWAV ("quit.wav");
-    hurts = Mix_LoadWAV ("hurts.wav");
 
 
      /* ----- Sprites bomba ----- */
@@ -1212,6 +1042,8 @@ int main ( int argc, char** argv )
 
 
     SDL_Event eventwingame;
+    SDL_Event eventinstrucoes;
+    SDL_Event eventrecordes;
     SDL_Event eventperdeujogo;
     SDL_Event eventfimfase;
     SDL_Event eventpause;
@@ -1219,12 +1051,15 @@ int main ( int argc, char** argv )
     SDL_Event event;
     int rodador_jogokup = 0;
     int contin_passoufase = 0;
+    int contin_recordes = 0;
+    int contin_instrucoes = 0;
     int contin_wingame = 0;
     int contin_perdeujogo = 0;
     int contin_pause = 0;
 
     int mapa[11][17];
     FILE* leitorfase;
+    FILE* continfase;
 
     int faseatual = 1;
     int val_matriz = 0;
@@ -1244,7 +1079,9 @@ int main ( int argc, char** argv )
 
     char nomearqfase[15];
 
-    int opcaomenu = 1, opcaofimfase = 1, opcaoperdeujogo = 1, opcaopause = 1, continuar = 0, infos = 0, recordes = 0, linha = 0 ;
+    int pontuacaototaljogador = 0;
+
+    int opcaomenu = 1, opcaofimfase = 1, opcaoperdeujogo = 1, opcaopause = 1, continuar = 0, recordes = 0, linha = 0 ;
 
     int perdeu_jogo = 0;
 
@@ -1253,6 +1090,7 @@ int main ( int argc, char** argv )
     int faserodando = 1;
     int fimjogo = 0;
     int wingame = 0;
+    int instrucoes = 0;
     int emorreu = 0;
     int fimtempo = 0;
     int vidas = 3;
@@ -1262,11 +1100,10 @@ int main ( int argc, char** argv )
 
 /*---------------------------------- Main Loop ------------------------------*/
     opcaomenu = 1;
-    Mix_PlayMusic(theme, -1 );
     while(sairjogo == 0)
     {
-        Mix_ResumeMusic();
     perdeu_jogo = 0;
+    contin_perdeujogo = 0;
 
     apply_surface(0,0,fundomenu,screen, NULL);
 
@@ -1295,15 +1132,13 @@ int main ( int argc, char** argv )
                         opcaomenu--;
                         if(opcaomenu<1)
                             opcaomenu = 1;
-                        if(opcaomenu == 3 || opcaomenu == 4)
-                            opcaomenu = 2;
                         break;
                     }
 
                     if (eventmenu.key.keysym.sym == SDLK_DOWN){ // keystates[ SDLK_DOWN ]
                         
                         opcaomenu++;
-                        if(opcaomenu>5 || opcaomenu == 3 || opcaomenu == 4)
+                        if(opcaomenu>5)
                             opcaomenu = 5;
                         break;
                     }
@@ -1317,15 +1152,22 @@ int main ( int argc, char** argv )
                             faseatual = 1;
                             perdeu_jogo = 0;
                             wingame = 0;
+                            contin_perdeujogo = 0;
+                            pontuacaototaljogador = 0;
                         }
                         else if(opcaomenu == 2){
+                            continfase = fopen("fasesalva.dat" ,"r");
+                            fread(&faseatual, sizeof(int), 1, continfase);
+                            fclose(continfase);
                             jogorodando = 0;
                             faserodando = 0;
+                            passou_fase = 0;
+
                         }
-                        //else if(opcaomenu == 3)
-                        //    infos = 0;
-                        //else if(opcaomenu == 4)
-                        //    recordes = 0;
+                        else if(opcaomenu == 3)
+                            instrucoes = 1;
+                        else if(opcaomenu == 4)
+                            recordes = 1;
                         else if (opcaomenu==5)
                             sairjogo = 1;
                         break;
@@ -1346,10 +1188,10 @@ for(linha=0;linha<5;linha++)
         apply_surface(662,278,seletor,screen, NULL);
     else if(opcaomenu==2)
         apply_surface(670,329,seletor,screen, NULL);
-    //else if(opcaomenu==3)
-    //    apply_surface(690,380,seletor,screen, NULL);
-    //else if(opcaomenu==4)
-    //    apply_surface(715,429,seletor,screen, NULL);
+    else if(opcaomenu==3)
+        apply_surface(690,380,seletor,screen, NULL);
+    else if(opcaomenu==4)
+        apply_surface(715,429,seletor,screen, NULL);
     else if(opcaomenu==5)
         apply_surface(842,478,seletor,screen, NULL);
 
@@ -1358,7 +1200,7 @@ SDL_Flip(screen);
 
 
 while(jogorodando == 0 && faseatual <= ultfase){
- Mix_PauseMusic();
+
     if(passou_fase == 1){
         faseatual += 1;
         passou_fase = 0;
@@ -1368,6 +1210,11 @@ while(jogorodando == 0 && faseatual <= ultfase){
             wingame = 1;
         }
     }
+
+    continfase = fopen("fasesalva.dat" ,"w");
+    fwrite(&faseatual, sizeof(int), 1, continfase);
+    fclose(continfase);
+
     horainicfase = SDL_GetTicks();
     raiobomb = 1;
     vidas = 3;
@@ -1387,6 +1234,7 @@ while(jogorodando == 0 && faseatual <= ultfase){
                     mapa[j][i] = val_matriz;
                 }
             }
+            fclose(leitorfase);
             conf_kup = 0;
             inc_my = 0;
             inc_mx = 0;
@@ -1511,19 +1359,15 @@ while(jogorodando == 0 && faseatual <= ultfase){
                 if(mapa[yAtual+inc_my][xAtual] == 13){ 
                     mapa[yAtual+inc_my][xAtual] = 0;
                     raiobomb += 1;
-                    Mix_PlayChannel(-1,bubble,0);
                 } else if(mapa[yAtual+inc_my][xAtual] == 16){ 
                     mapa[yAtual+inc_my][xAtual] = 0;
                     vidas += 1;
-                    Mix_PlayChannel(-1,yipie,0);
                 } else if(mapa[yAtual+inc_my][xAtual] == 19){ 
                     mapa[yAtual+inc_my][xAtual] = 0;
                     pontuacao += 200;
                     colet_clubcard += 1;
-                    Mix_PlayChannel(-1,hail,0);
                 } else if(mapa[yAtual+inc_my][xAtual] == 52){
                     passou_fase = 1;
-                    Mix_PlayChannel(-1,myname,0);
                 }
                 yAtual += inc_my;
                 if(inc_my != 0){
@@ -1545,7 +1389,6 @@ while(jogorodando == 0 && faseatual <= ultfase){
                     colet_clubcard += 1;
                 } else if(mapa[yAtual][xAtual+inc_mx] == 52){
                     passou_fase = 1;
-                    Mix_PlayChannel(-1,myname,0);
                 }
                 xAtual += inc_mx;
                 if(inc_mx != 0){
@@ -2242,7 +2085,6 @@ while(jogorodando == 0 && faseatual <= ultfase){
         rodador_temporenasc = 0;
         roda_blitaplayer = 1;
         tempo_renasc = -1500;
-        Mix_PlayChannel( -1, quit, 0 );
     }
     /* ------ Fim perde vida com a bomba ------ */
 
@@ -2257,7 +2099,6 @@ while(jogorodando == 0 && faseatual <= ultfase){
             yInimigoa = -30;
             matou_alien = 1;
             tempo_matoualien = SDL_GetTicks();
-            Mix_PlayChannel( -1, diesob, 0 );
         }
     }
     /* ------ Fim mata o inimigo A com a bomba ------ */
@@ -2273,7 +2114,6 @@ while(jogorodando == 0 && faseatual <= ultfase){
             yInimigob = -30;
             matou_alien = 1;
             tempo_matoualien = SDL_GetTicks();
-            Mix_PlayChannel( -1, letgod, 0 );
         }
     }
     /* ------ Fim mata o inimigo B com a bomba ------ */
@@ -2289,7 +2129,6 @@ while(jogorodando == 0 && faseatual <= ultfase){
             yInimigoc = -30;
             matou_alien = 1;
             tempo_matoualien = SDL_GetTicks();
-            Mix_PlayChannel( -1, hurts, 0 );
         }
     }
     /* ------ Fim mata o inimigo C com a bomba ------ */
@@ -2305,7 +2144,6 @@ while(jogorodando == 0 && faseatual <= ultfase){
             yInimigod = -30;
             matou_alien = 1;
             tempo_matoualien = SDL_GetTicks();
-            Mix_PlayChannel( -1, hell, 0 );
         }
     }
     /* ------ Fim mata o inimigo D com a bomba ------ */
@@ -2376,7 +2214,6 @@ while(jogorodando == 0 && faseatual <= ultfase){
         rodador_temporenasc = 0;
         roda_blitaplayer = 1;
         tempo_renasc = -1500;
-        Mix_PlayChannel( -1, pissin, 0 );
     }
     /* ------ Fim perde vida com inimigo ------ */
 
@@ -2565,8 +2402,6 @@ while(jogorodando == 0 && faseatual <= ultfase){
 
 
         if(rodador_animexp == 1){
-            Mix_Volume(-1, 20);
-            Mix_PlayChannel( -1, explosao, 0 );
             for(i=0;i<17;i++){
                 for(j=0;j<11;j++){
                     if(SDL_GetTicks()-tempo_parexp < 100){
@@ -3266,6 +3101,7 @@ if(passou_fase == 1){
     radioatividade = pontuacao;
     pontuacao += (vidas*100);
     pontuacao = (((300-cron_segjogo)/10)*pontuacao);
+    pontuacaototaljogador += pontuacao;
 
     while(contin_passoufase == 0){
 
@@ -3374,9 +3210,21 @@ if(passou_fase == 1){
 if(perdeu_jogo == 1){
     opcaoperdeujogo = 1;
     contin_perdeujogo = 0;
+
+    pontuacao += (vidas*100);
+    pontuacao = (((300-cron_segjogo)/10)*pontuacao);
+    pontuacaototaljogador += pontuacao;
+
+    l = 0;
+    for(i=0;i<20;i++){
+        temp[i] = '\0';
+        jogador.nome[i] = '\0';
+    }
+
+    SDL_EnableUNICODE( SDL_ENABLE );
     while(contin_perdeujogo == 0)
     {
-        /*
+        
         while( SDL_PollEvent( &eventperdeujogo ) )
         {
             if( eventperdeujogo.type == SDL_KEYDOWN )
@@ -3391,7 +3239,7 @@ if(perdeu_jogo == 1){
                         temp[l] = (char)eventperdeujogo.key.keysym.unicode;
                         jogador.nome[l] = (char)eventperdeujogo.key.keysym.unicode;
                         printf("%c\n",temp[l]);
-                                    l++;
+                        l++;
                     }
                     //If the key is a number
                     if( ( eventperdeujogo.key.keysym.unicode >= (Uint16)'0' ) && ( eventperdeujogo.key.keysym.unicode <= (Uint16)'9' ) )
@@ -3400,7 +3248,7 @@ if(perdeu_jogo == 1){
                         temp[l] = (char)eventperdeujogo.key.keysym.unicode;
                         jogador.nome[l] = (char)eventperdeujogo.key.keysym.unicode;
                         printf("%c\n",temp[l]);
-                                    l++;
+                        l++;
                     }
                     //If the key is a uppercase letter
                     if( ( eventperdeujogo.key.keysym.unicode >= (Uint16)'A' ) && ( eventperdeujogo.key.keysym.unicode <= (Uint16)'Z' ) )
@@ -3408,8 +3256,8 @@ if(perdeu_jogo == 1){
                         //Append the character
                         temp[l] = (char)eventperdeujogo.key.keysym.unicode;
                         jogador.nome[l] = (char)eventperdeujogo.key.keysym.unicode;
-                                    printf("%c\n",temp[l]);
-                                    l++;
+                        printf("%c\n",temp[l]);
+                        l++;
                     }
                     //If the key is a lowercase letter
                     if( ( eventperdeujogo.key.keysym.unicode >= (Uint16)'a' ) && ( eventperdeujogo.key.keysym.unicode <= (Uint16)'z' ) )
@@ -3418,7 +3266,7 @@ if(perdeu_jogo == 1){
                         temp[l] = (char)eventperdeujogo.key.keysym.unicode;
                         jogador.nome[l] = (char)eventperdeujogo.key.keysym.unicode;
                         printf("%c\n",temp[l]);
-                                    l++;
+                        l++;
                     }
                 }
                     //If backspace was pressed and the string isn't blank
@@ -3426,76 +3274,206 @@ if(perdeu_jogo == 1){
                     {
                         //Remove a character from the end
                         l--;
-                                temp[l]=' ';
-                                jogador.nome[l]=' ';
+                        temp[l]='\0';
+                        jogador.nome[l]='\0';
                     }
                     if( ( eventperdeujogo.key.keysym.sym == SDLK_RETURN ) && ( l != 0 ) )
                     {
-                                temp[l]='\0';
-                                jogador.nome[l] ='\0';
-                                jogorodando = 1;
-                                faserodando = 1;
-                                contin_perdeujogo = 1;
+                        temp[l]='\0';
+                        jogador.nome[l] ='\0';
 
-                    }
-                        //CRIA O TEXTO QUE VAI APARECER NA TELA
-                        textrecord = TTF_RenderText_Solid( font, temp, textColorCinza );
-                    }
-              if( eventperdeujogo.type == SDL_QUIT )
-                {
-                //SAI DO PROGRAMA
-                contin_perdeujogo = 1;
-                }
-
-                }
-            */
-                //printf("%s\n", temp);
-
-        while (SDL_PollEvent(&eventperdeujogo))
-        {
-            // check for messages
-            switch (eventperdeujogo.type)
-            {
-                // exit if the window is closed
-            case SDL_QUIT:
-                jogorodando = 1;
-                faserodando = 1;
-                sairjogo = 1;
-                break;
-
-
-                // check for keypresses
-            case SDL_KEYDOWN:
-                {
-                    if (eventperdeujogo.key.keysym.sym == SDLK_RETURN){
                         jogorodando = 1;
                         faserodando = 1;
                         contin_perdeujogo = 1;
+                        perdeu_jogo = 0;
                     }
-                }
-            } // end switch
+
+                    if (eventperdeujogo.type == SDL_QUIT){
+                        jogorodando = 1;
+                        faserodando = 1;
+                        sairjogo = 1;
+                        contin_perdeujogo = 1;
+                        perdeu_jogo = 0;
+                        break;
+                    }
+
+                    //CRIA O TEXTO QUE VAI APARECER NA TELA
+                    textrecord = TTF_RenderText_Solid( font_pontos, temp, textColorCinza );
+            }
         }
 
-        //apply_surface( 505, 500, textrecord, screen, NULL );
-        SDL_Flip(screen);
-        apply_surface( 0, 0, fundoperdeujogo, screen, NULL );
+        apply_surface( 380, 507, textrecord, screen, NULL );
+
+            SDL_Flip(screen);
+            apply_surface( 0, 0, fundoperdeujogo, screen, NULL );
+        }
+
+    for(i=1;temp[i]!='\0';i++){
+        rec1.nome[i-1] = temp[i-1];
     }
+    //fgets(rec1.nome, MAX_NOME, stdin);
+
+    rec1.nome[strlen(rec1.nome) - 1] = '\0';
+
+    //printf("Pontuação:");
+    rec1.pontuacaorecord = pontuacaototaljogador;
+
+    insere(&array, rec1);
+
+    if((p_arquivo = fopen(nome_arquivo, "w")) == NULL)
+    {
+        perror("fopen:");
+        return 1;
+    }
+
+    fwrite(&array, sizeof(ARRAY), 1, p_arquivo);
+    fclose(p_arquivo);
+
+    pontuacaototaljogador = 0;
 }
-
-
-
 
 
 
 if(wingame == 1){
-    opcaoperdeujogo = 1;
-    contin_perdeujogo = 0;
+    pontuacao += (vidas*100);
+    pontuacao = (((300-cron_segjogo)/10)*pontuacao);
+    pontuacaototaljogador += pontuacao;
+
+    contin_wingame = 0;
+
+    l = 0;
+    for(i=0;i<20;i++){
+        temp[i] = '\0';
+        jogador.nome[i] = '\0';
+    }
+
+    SDL_EnableUNICODE( SDL_ENABLE );
     while(contin_wingame == 0)
     {
-        while (SDL_PollEvent(&eventwingame))
+        while( SDL_PollEvent( &eventwingame ) )
+        {
+            if( eventwingame.type == SDL_KEYDOWN )
+            {
+                //If the string less than maximum size
+                if( strlen(temp) <= 19 )
+                {
+                    //If the key is a space
+                    if( eventwingame.key.keysym.unicode == (Uint16)' ' )
+                    {
+                        //Append the character
+                        temp[l] = (char)eventwingame.key.keysym.unicode;
+                        jogador.nome[l] = (char)eventwingame.key.keysym.unicode;
+                        printf("%c\n",temp[l]);
+                        l++;
+                    }
+                    //If the key is a number
+                    if( ( eventwingame.key.keysym.unicode >= (Uint16)'0' ) && ( eventwingame.key.keysym.unicode <= (Uint16)'9' ) )
+                    {
+                        //Append the character
+                        temp[l] = (char)eventwingame.key.keysym.unicode;
+                        jogador.nome[l] = (char)eventwingame.key.keysym.unicode;
+                        printf("%c\n",temp[l]);
+                        l++;
+                    }
+                    //If the key is a uppercase letter
+                    if( ( eventwingame.key.keysym.unicode >= (Uint16)'A' ) && ( eventwingame.key.keysym.unicode <= (Uint16)'Z' ) )
+                    {
+                        //Append the character
+                        temp[l] = (char)eventwingame.key.keysym.unicode;
+                        jogador.nome[l] = (char)eventwingame.key.keysym.unicode;
+                        printf("%c\n",temp[l]);
+                        l++;
+                    }
+                    //If the key is a lowercase letter
+                    if( ( eventwingame.key.keysym.unicode >= (Uint16)'a' ) && ( eventwingame.key.keysym.unicode <= (Uint16)'z' ) )
+                    {
+                        //Append the character
+                        temp[l] = (char)eventwingame.key.keysym.unicode;
+                        jogador.nome[l] = (char)eventwingame.key.keysym.unicode;
+                        printf("%c\n",temp[l]);
+                        l++;
+                    }
+                }
+                    //If backspace was pressed and the string isn't blank
+                    if( ( eventwingame.key.keysym.sym == SDLK_BACKSPACE ) && ( l != 0 ) )
+                    {
+                        //Remove a character from the end
+                        l--;
+                        temp[l]='\0';
+                        jogador.nome[l]='\0';
+                    }
+                    if( ( eventwingame.key.keysym.sym == SDLK_RETURN ) && ( l != 0 ) )
+                    {
+                        temp[l]='\0';
+                        jogador.nome[l] ='\0';
+
+                        jogorodando = 1;
+                        faserodando = 1;
+                        contin_wingame = 1;
+                        wingame = 0;
+                    }
+
+                    if (eventwingame.type == SDL_QUIT){
+                        jogorodando = 1;
+                        faserodando = 1;
+                        sairjogo = 1;
+                        contin_wingame = 1;
+                        wingame = 0;
+                        break;
+                    }
+
+                    //CRIA O TEXTO QUE VAI APARECER NA TELA
+                    textrecord = TTF_RenderText_Solid( font_pontos, temp, textCorAmarelo );
+            }
+        }
+
+        apply_surface( 250, 635, textrecord, screen, NULL );
+
+        SDL_Flip(screen);
+        apply_surface( 0, 0, fundowingame, screen, NULL );
+    }
+
+
+    for(i=1;temp[i]!='\0';i++){
+        rec1.nome[i-1] = temp[i-1];
+    }
+    //fgets(rec1.nome, MAX_NOME, stdin);
+
+    rec1.nome[strlen(rec1.nome) - 1] = '\0';
+
+    //printf("Pontuação:");
+    rec1.pontuacaorecord = pontuacaototaljogador;
+
+    insere(&array, rec1);
+
+    if((p_arquivo = fopen(nome_arquivo, "w")) == NULL)
+    {
+        perror("fopen:");
+        return 1;
+    }
+
+    fwrite(&array, sizeof(ARRAY), 1, p_arquivo);
+    fclose(p_arquivo);
+
+    pontuacaototaljogador = 0;
+}
+
+
+
+    }
+
+
+
+
+
+if(instrucoes == 1){    
+    contin_instrucoes = 0;
+    while(contin_instrucoes == 0)
+    {
+        while (SDL_PollEvent(&eventinstrucoes))
         {
             // check for messages
-            switch (eventwingame.type)
+            switch (eventinstrucoes.type)
             {
                 // exit if the window is closed
             case SDL_QUIT:
@@ -3508,22 +3486,72 @@ if(wingame == 1){
                 // check for keypresses
             case SDL_KEYDOWN:
                 {
-                    if (eventwingame.key.keysym.sym == SDLK_RETURN){
+                    if (eventinstrucoes.key.keysym.sym == SDLK_RETURN){
                         jogorodando = 1;
                         faserodando = 1;
-                        contin_wingame = 1;
+                        contin_instrucoes = 1;
+                        instrucoes = 0;
                     }
                 }
             } // end switch
         }
         SDL_Flip(screen);
-        apply_surface( 0, 0, fundowingame, screen, NULL );
+        apply_surface( 0, 0, fundoinstrucoes, screen, NULL );
     }
 }
 
 
 
+
+if(recordes == 1){
+    contin_recordes = 0;
+    while(contin_recordes == 0)
+    {
+        
+        while( SDL_PollEvent( &eventrecordes ) )
+        {
+
+            // check for messages
+            switch (eventrecordes.type)
+            {
+                // exit if the window is closed
+            case SDL_QUIT:
+            {
+                jogorodando = 1;
+                faserodando = 1;
+                sairjogo = 1;
+                break;
+            }
+
+                // check for keypresses
+            case SDL_KEYDOWN:
+                {
+                    if (eventrecordes.key.keysym.sym == SDLK_RETURN){
+                        jogorodando = 1;
+                        faserodando = 1;
+                        contin_recordes = 1;
+                        recordes = 0;
+                    }
+                }
+            } // end switch
+        }
+
+        for(i = 0; i < tamanho(&array); i++){
+            recorde = elemento(&array, i);
+            sprintf(vaiblitar,"%d. %s : %d pts", i+1, recorde.nome, recorde.pontuacaorecord);
+            text_vaiblitar = TTF_RenderText_Solid( font_pontos, vaiblitar, textCorAmarelo );
+            apply_surface( 350, 115 + (i*42), text_vaiblitar, screen, NULL );
+        }
+        SDL_Flip(screen);
+        apply_surface( 0, 0, fundorecordes, screen, NULL );
     }
+}
+
+
+
+
+
+
     }
 
 
@@ -3568,4 +3596,105 @@ if(wingame == 1){
 
     printf("Fechamento do Jogo\n");
     return 0;
+}
+
+
+
+
+RECORDE elemento(ARRAY *array, int posicao)
+{
+    return array->vetor[posicao];
+}
+
+int tamanho(ARRAY *array)
+{
+    return array->n;
+}
+
+void insere(ARRAY *array, RECORDE recorde)
+{
+    if(tamanho(array) < MAX_ARRAY)
+    {
+        array->vetor[tamanho(array)] = recorde;
+        array->n += 1;
+    }
+    else
+    {
+        RECORDE menor_recorde;
+        menor_recorde = elemento(array, MAX_ARRAY - 1);
+        
+        if(menor_recorde.pontuacaorecord >= recorde.pontuacaorecord)
+        {
+            return;
+        }
+        else
+        {
+            remove_posicao(array, MAX_ARRAY - 1);
+            insere(array, recorde);
+            return;
+        }
+    }
+    
+    sort(array);
+}
+
+void remove_posicao(ARRAY *array, int posicao)
+{
+    if(tamanho(array) == 0)
+    {
+        return;
+    }
+    else if(tamanho(array) == 1)
+    {
+        array->n -= 1;
+        return;
+    }
+    else
+    {
+        array->n -= 1;
+        array->vetor[posicao] = array->vetor[tamanho(array)];
+    }
+    
+    sort(array);
+}
+
+/*
+void imprime(ARRAY *array)
+{
+    int i;
+    char vaiblitar[50];
+    SDL_Surface *text_vaiblitar = NULL;
+    RECORDE recorde;
+
+    for(i = 0; i < tamanho(array); i++)
+    {
+        recorde = elemento(array, i);
+        sprintf(vaiblitar,"%d- %s: %d pts\n", i+1, recorde.nome, recorde.pontuacaorecord);
+        text_vaiblitar = TTF_RenderText_Solid( font_pontos, vaiblitar, textColorCinza );
+        apply_surface( 400, 300, text_vaiblitar, screen, NULL );
+    }
+}*/
+
+void sort(ARRAY *array)
+{
+    bubble_sort(array->vetor, array->n);
+}
+
+void bubble_sort(RECORDE list[], int n)
+{
+    int i, j;
+    RECORDE swap;
+
+    for(i = 0 ; i < ( n - 1 ); i++)
+    {
+        for(j = 0 ; j < n - i - 1; j++)
+        {
+            if(list[j].pontuacaorecord < list[j+1].pontuacaorecord)
+            { 
+                swap = list[j];
+                list[j] = list[j+1];
+                list[j+1] = swap;
+            }
+        }
+    }
 }
